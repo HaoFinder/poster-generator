@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Lilwa Delivery · Social Poster Builder</title>
+    <!-- Tailwind CSS via CDN (modern UI/UX) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 6 (social icons, phone, email, website) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* custom smooth corners, canvas exact IG size (1080x1080) */
+        body {
+            background: #f4f2ef;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap');
+        canvas {
+            border-radius: 36px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            display: block;
+            background: #111;
+        }
+        .canvas-wrapper {
+            max-width: 540px;  /* half of 1080 for retina-ish display, but canvas is 1080px */
+            margin: 0 auto;
+        }
+        /* subtle hover on upload */
+        .upload-area {
+            transition: all 0.2s ease;
+        }
+        .badge-icon {
+            backdrop-filter: blur(4px);
+            background: rgba(0,0,0,0.5);
+        }
+        /* lilwa brand accent */
+        .accent-glow {
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.3);
+        }
+    </style>
+</head>
+<body class="antialiased p-5 md:p-8">
+
+<div class="max-w-6xl mx-auto">
+    
+    <!-- header: tool identity -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between mb-6">
+        <div>
+            <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-gray-800 flex items-center gap-3">
+                <span class="bg-amber-500 text-white px-4 py-2 rounded-2xl shadow-md text-3xl">LILWA</span>
+                <span class="font-light text-gray-600">poster builder</span>
+            </h1>
+            <p class="text-gray-500 mt-2 text-lg flex items-center gap-3 flex-wrap">
+                <span><i class="fas fa-cube mr-1 text-amber-600"></i> bulk‑ready · IG 1080x1080</span>
+                <span class="hidden sm:inline">•</span>
+                <span><i class="fas fa-paint-brush mr-1"></i>logo + CTAs + socials pre‑defined</span>
+            </p>
+        </div>
+        <div class="mt-4 md:mt-0 flex gap-3">
+            <div class="bg-white/70 backdrop-blur-sm px-5 py-2 rounded-full text-sm font-medium shadow-sm border border-gray-200">
+                <i class="fas fa-phone-alt text-amber-600 mr-2"></i>0115 006 628
+            </div>
+            <div class="bg-white/70 backdrop-blur-sm px-5 py-2 rounded-full text-sm font-medium shadow-sm border border-gray-200">
+                <i class="far fa-envelope text-amber-600 mr-2"></i>yes@lilwadelivery.com
+            </div>
+        </div>
+    </div>
+
+    <!-- main grid: canvas + controls -->
+    <div class="grid lg:grid-cols-12 gap-8">
+        <!-- LEFT: canvas preview (IG size) -->
+        <div class="lg:col-span-7">
+            <div class="canvas-wrapper sticky top-6">
+                <div class="relative">
+                    <canvas id="posterCanvas" width="1080" height="1080" class="w-full border-4 border-white/80"></canvas>
+                    <!-- subtle loading indicator -->
+                    <div id="canvasPlaceholderOverlay" class="absolute inset-0 flex items-center justify-center pointer-events-none text-white/60 text-sm rounded-[36px] bg-black/5">
+                        <!-- placeholder invisible, but we use canvas drawing anyway -->
+                    </div>
+                </div>
+                <!-- quick actions -->
+                <div class="flex mt-5 gap-3 justify-center">
+                    <button id="downloadBtn" class="bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-7 rounded-xl shadow-lg transition flex items-center gap-2 text-base">
+                        <i class="fas fa-download"></i> Download poster
+                    </button>
+                    <button id="resetImageBtn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-xl shadow-sm transition flex items-center gap-2">
+                        <i class="fas fa-undo-alt"></i> New image
+                    </button>
+                </div>
+                <p class="text-xs text-center text-gray-400 mt-3">click “download” to save 1080x1080 PNG • bulk production ready</p>
+            </div>
+        </div>
+
+        <!-- RIGHT: controls + upload -->
+        <div class="lg:col-span-5 space-y-6">
+            <!-- upload card -->
+            <div class="bg-white rounded-3xl p-6 shadow-xl border border-gray-100">
+                <h2 class="text-xl font-bold flex items-center gap-2 text-gray-800 mb-1">
+                    <i class="fas fa-cloud-upload-alt text-amber-600"></i> 1. Upload image
+                </h2>
+                <p class="text-gray-500 text-sm mb-4">background photo (JPEG/PNG) — fits 1080x1080 cover</p>
+                
+                <div class="upload-area border-2 border-dashed border-amber-300 bg-amber-50/30 rounded-2xl p-6 text-center cursor-pointer hover:bg-amber-50 transition" id="dropZone">
+                    <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden" />
+                    <i class="fas fa-image text-4xl text-amber-500 mb-3"></i>
+                    <p class="font-medium text-gray-700" id="uploadText">Drag & drop or <span class="text-amber-700 underline">browse</span></p>
+                    <p class="text-xs text-gray-400 mt-2">recommended square or larger · will be cropped nicely</p>
+                </div>
+                
+                <!-- optional tweak: overlay opacity (simple, professional) -->
+                <div class="mt-5">
+                    <label class="block text-sm font-medium text-gray-600 mb-1"><i class="fas fa-adjust mr-1"></i>brand bar opacity</label>
+                    <input type="range" id="opacitySlider" min="0.5" max="1.0" step="0.05" value="0.85" class="w-full accent-amber-600" />
+                    <div class="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>softer</span>
+                        <span>solid</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- preview of static elements (always included) -->
+            <div class="bg-white rounded-3xl p-6 shadow-xl border border-gray-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="h-10 w-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-700"><i class="fas fa-check-circle text-xl"></i></div>
+                    <h3 class="font-bold text-gray-800 text-lg">canvas fixed assets</h3>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="flex items-center gap-2 bg-gray-50 p-3 rounded-xl"><i class="fas fa-store text-amber-600 w-5"></i> <span class="font-medium">lilwadelivery.com</span></div>
+                    <div class="flex items-center gap-2 bg-gray-50 p-3 rounded-xl"><i class="fas fa-phone-alt text-amber-600 w-5"></i> 0115 006 628</div>
+                    <div class="flex items-center gap-2 bg-gray-50 p-3 rounded-xl"><i class="far fa-envelope text-amber-600 w-5"></i> yes@lilwadelivery.com</div>
+                    <div class="flex items-center gap-2 bg-gray-50 p-3 rounded-xl"><i class="fas fa-hashtag text-amber-600 w-5"></i> @lilwadelivery</div>
+                </div>
+                <div class="mt-5 flex gap-4 text-2xl text-gray-700 justify-around border-t pt-5">
+                    <i class="fab fa-instagram hover:text-amber-600 transition"></i>
+                    <i class="fab fa-tiktok hover:text-amber-600 transition"></i>
+                    <i class="fab fa-facebook hover:text-amber-600 transition"></i>
+                    <span class="text-sm font-mono bg-gray-100 px-3 py-1 rounded-full">ig · tt · fb</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-4 flex items-center"><i class="fas fa-pen-nib mr-1"></i>logo + sample CTAs · all social icons included</p>
+            </div>
+            
+            <!-- tip box -->
+            <div class="bg-amber-50/80 rounded-2xl p-5 border border-amber-200 text-sm text-gray-700">
+                <i class="fas fa-lightbulb text-amber-600 mr-2"></i>
+                <span class="font-semibold">bulk production:</span> upload image → download → repeat. Logo, phone, email, web & socials are locked on brand.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        "use strict";
+
+        // ----- CANVAS & CONTEXT (1080x1080) -----
+        const canvas = document.getElementById('posterCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // DOM elements
+        const fileInput = document.getElementById('imageUpload');
+        const dropZone = document.getElementById('dropZone');
+        const uploadText = document.getElementById('uploadText');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetImageBtn');
+        const opacitySlider = document.getElementById('opacitySlider');
+
+        // Brand assets (predefined)
+        const BRAND = {
+            logoText: 'LILWA',        // we draw as primary wordmark + "delivery"
+            website: 'lilwadelivery.com',
+            phone: '0115 006 628',
+            email: 'yes@lilwadelivery.com',
+            socials: ['instagram', 'tiktok', 'facebook'] // font awesome names
+        };
+
+        // Default background (if no image) – subtle gradient to show canvas is active
+        let userImage = null;          // HTMLImageElement
+
+        // For rendering consistency
+        let currentOpacity = 0.85;
+
+        // ---------- draw static template (background image + overlays) ----------
+        function drawCanvas() {
+            // Clear canvas
+            ctx.clearRect(0, 0, 1080, 1080);
+            
+            // 1. Draw background: if userImage loaded, draw it cover; else placeholder gradient
+            if (userImage && userImage.complete && userImage.naturalWidth > 0) {
+                // cover behaviour (like object-fit: cover)
+                const imgW = userImage.naturalWidth;
+                const imgH = userImage.naturalHeight;
+                const canvasW = 1080, canvasH = 1080;
+                
+                let sx = 0, sy = 0, sWidth = imgW, sHeight = imgH;
+                const targetAspect = canvasW / canvasH;
+                const imgAspect = imgW / imgH;
+                
+                if (imgAspect > targetAspect) {
+                    // image wider: crop sides
+                    sWidth = imgH * targetAspect;
+                    sx = (imgW - sWidth) / 2;
+                } else {
+                    // image taller: crop top/bottom
+                    sHeight = imgW / targetAspect;
+                    sy = (imgH - sHeight) / 2;
+                }
+                ctx.drawImage(userImage, sx, sy, sWidth, sHeight, 0, 0, canvasW, canvasH);
+            } else {
+                // elegant gradient placeholder (Lilwa brand vibe)
+                const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
+                grad.addColorStop(0, '#fbbf24'); // amber-400
+                grad.addColorStop(0.5, '#d97706'); // amber-600
+                grad.addColorStop(1, '#b45309');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 1080, 1080);
+                // subtle pattern
+                ctx.fillStyle = '#ffffff20';
+                ctx.font = 'bold 180px "Inter", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('📸', 540, 480);
+                ctx.font = '24px "Inter", sans-serif';
+                ctx.fillStyle = '#ffffff90';
+                ctx.fillText('upload your image', 540, 640);
+            }
+
+            // 2. Draw semi-transparent dark overlay for readability (bottom gradient)
+            const overlayGrad = ctx.createLinearGradient(0, 700, 0, 1080);
+            overlayGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            overlayGrad.addColorStop(0.6, `rgba(20,20,20,${currentOpacity*0.7})`);
+            overlayGrad.addColorStop(1, `rgba(10,10,10,${currentOpacity})`);
+            ctx.fillStyle = overlayGrad;
+            ctx.fillRect(0, 600, 1080, 480);
+            
+            // also a tiny top gradient for logo area
+            const topGrad = ctx.createLinearGradient(0, 0, 0, 200);
+            topGrad.addColorStop(0, `rgba(0,0,0,${currentOpacity*0.3})`);
+            topGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = topGrad;
+            ctx.fillRect(0, 0, 1080, 200);
+
+            // ----- DRAW LOGO (predefined) -----
+            ctx.save();
+            // Lilwa logo: modern pill + text
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 16;
+            ctx.shadowOffsetY = 4;
+            
+            // background pill behind logo (amber)
+            ctx.fillStyle = '#ea580c'; // amber-600
+            ctx.shadowColor = '#7c2d12';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.roundRect(60, 60, 240, 90, 50);
+            ctx.fill();
+            ctx.shadowBlur = 8;
+            // 'LILWA' bold
+            ctx.font = 'bold 58px "Inter", "Segoe UI", sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#00000040';
+            ctx.shadowOffsetY = 2;
+            ctx.fillText('LILWA', 105, 123);
+            // 'delivery' smaller
+            ctx.font = '500 30px "Inter", sans-serif';
+            ctx.fillStyle = '#fef3c7';
+            ctx.fillText('delivery', 182, 123);
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.restore();
+
+            // small website next to logo? we keep separate, but we can add .com near
+            ctx.font = '500 24px "Inter", sans-serif';
+            ctx.fillStyle = '#ffedd5';
+            ctx.shadowColor = '#00000060';
+            ctx.shadowBlur = 8;
+            ctx.fillText('lilwadelivery.com', 330, 115);
+            ctx.shadowBlur = 0;
+
+            // ----- BOTTOM SECTION: phone, email, CTAs + socials (modern) -----
+            const bottomY = 920; // base line
+            
+            // phone & email row
+            ctx.font = '600 34px "Inter", sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#00000070';
+            ctx.shadowBlur = 10;
+            ctx.fillText('📞 0115 006 628', 80, bottomY);
+            
+            ctx.font = '500 30px "Inter", sans-serif';
+            ctx.fillStyle = '#fde68a';
+            ctx.fillText('✉ yes@lilwadelivery.com', 560, bottomY);
+            
+            // website (repeated prominently)
+            ctx.font = '500 32px "Inter", sans-serif';
+            ctx.fillStyle = '#fef9c3';
+            ctx.fillText('lilwadelivery.com', 80, 990);
+            
+            // ----- SOCIAL ICONS (using Font Awesome via canvas? we draw text icons) -----
+            // we use unicode/emoji-like but we can use Font Awesome with canvas? we'll emulate.
+            // better: draw circles with FA text fallback (we use Font Awesome style)
+            ctx.shadowBlur = 8;
+            const socialXStart = 700;
+            const socialY = 990;
+            
+            // draw three circles with social symbols (use font icons not loaded in canvas, so we draw text labels)
+            const socials = [
+                { icon: '📷', label: 'IG', color: '#d62976' },
+                { icon: '🎵', label: 'TT', color: '#000000' },
+                { icon: '📘', label: 'FB', color: '#1877f2' }
+            ];
+            socials.forEach((s, i) => {
+                const x = socialXStart + i * 100;
+                // circle
+                ctx.beginPath();
+                ctx.arc(x, socialY-10, 36, 0, 2*Math.PI);
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = '#00000080';
+                ctx.fill();
+                ctx.shadowBlur = 4;
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                // icon
+                ctx.font = '38px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+                ctx.fillStyle = '#1e293b';
+                ctx.shadowBlur = 0;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(s.icon, x, socialY-12);
+                // small label
+                ctx.font = 'bold 16px "Inter", sans-serif';
+                ctx.fillStyle = '#334155';
+                ctx.fillText(s.label, x, socialY+24);
+            });
+            ctx.textAlign = 'left';
+            
+            // additional CTA sample: "ORDER NOW" badge 
+            ctx.save();
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = '#00000070';
+            ctx.font = 'bold 44px "Inter", sans-serif';
+            ctx.fillStyle = '#f97316';
+            ctx.fillText('⚡ SAME DAY DELIVERY', 80, 850);
+            ctx.font = '28px "Inter"';
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillText('tap to order · free over Ksh 1500', 80, 890);
+            ctx.restore();
+
+            // tiny branding line
+            ctx.font = '18px "Inter", sans-serif';
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillText('@lilwadelivery  ·  #LilwaOnTheGo', 80, 1040);
+            
+            // reset shadow
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+        }
+
+        // helper canvas rounding
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            this.moveTo(x + r, y);
+            this.lineTo(x + w - r, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + r);
+            this.lineTo(x + w, y + h - r);
+            this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            this.lineTo(x + r, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - r);
+            this.lineTo(x, y + r);
+            this.quadraticCurveTo(x, y, x + r, y);
+            return this;
+        };
+
+        // ----- handle image upload -----
+        function loadImageFromFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    userImage = img;
+                    drawCanvas();
+                    uploadText.innerText = file.name.length > 30 ? file.name.substring(0,25)+'…' : file.name;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // events
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                loadImageFromFile(e.target.files[0]);
+            }
+        });
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('bg-amber-100', 'border-amber-500');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('bg-amber-100', 'border-amber-500');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-amber-100', 'border-amber-500');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                loadImageFromFile(file);
+                fileInput.files = e.dataTransfer.files; // sync
+            } else {
+                alert('please drop an image file');
+            }
+        });
+
+        // reset image
+        resetBtn.addEventListener('click', () => {
+            userImage = null;
+            fileInput.value = '';
+            uploadText.innerText = 'Drag & drop or browse';
+            drawCanvas();
+        });
+
+        // opacity slider
+        opacitySlider.addEventListener('input', (e) => {
+            currentOpacity = parseFloat(e.target.value);
+            drawCanvas();
+        });
+
+        // download
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `lilwa_poster_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        // initial draw (placeholder)
+        // we can load a default sample image? no, draw placeholder.
+        (function initialize() {
+            // optional: preload a default image to demonstrate? not necessary.
+            // just draw canvas.
+            drawCanvas();
+        })();
+
+        // if window resizes, canvas is fixed 1080 so no redraw needed, but we keep draw consistent.
+        // additional: ensure font loading doesn't break
+        document.fonts.ready.then(() => drawCanvas());
+        
+    })();
+</script>
+<!-- ensure canvas draws properly after fonts load -->
+</body>
+  </html>
