@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lilwa Creative Engine · Enterprise Poster Studio</title>
+    <!-- Tailwind + Inter -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- JSZip for batch export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #f8f7f4; }
+        .canvas-container {
+            filter: drop-shadow(0 30px 40px rgba(0,0,0,0.12));
+        }
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 22px;
+            width: 22px;
+            border-radius: 22px;
+            background: #ea580c;
+            margin-top: -8px;
+            box-shadow: 0 4px 8px rgba(234,88,12,0.3);
+            border: 2px solid white;
+            cursor: pointer;
+        }
+        .template-card {
+            transition: all 0.2s ease;
+        }
+        .template-card.active {
+            border: 2px solid #ea580c;
+            background: #fff7ed;
+        }
+        /* Safe zone visualization */
+        .safe-zone-indicator {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="antialiased p-5 md:p-8">
+
+<div class="max-w-[1600px] mx-auto">
+    <!-- Header: Enterprise identity -->
+    <div class="flex flex-wrap items-center justify-between mb-6">
+        <div class="flex items-center gap-4">
+            <div class="h-14 w-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200/50">
+                <i class="fas fa-bolt text-white text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-4xl md:text-5xl font-black tracking-tight text-gray-900">
+                    lilwa<span class="text-amber-600">.</span>
+                </h1>
+                <div class="flex items-center gap-2 text-sm font-medium text-gray-500 -mt-1">
+                    <span>creative engine</span>
+                    <span class="w-1 h-1 bg-gray-400 rounded-full"></span>
+                    <span>enterprise · v2.0</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-3 mt-4 sm:mt-0">
+            <div class="bg-white/80 backdrop-blur-sm px-5 py-3 rounded-2xl shadow-sm border border-white flex items-center gap-3">
+                <i class="fas fa-phone-alt text-amber-600"></i>
+                <span class="font-semibold tracking-wide">0115 006 628</span>
+            </div>
+            <div class="bg-white/80 backdrop-blur-sm px-5 py-3 rounded-2xl shadow-sm border border-white flex items-center gap-3">
+                <i class="far fa-envelope text-amber-600"></i>
+                <span class="font-medium">yes@lilwadelivery.com</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid: Canvas + Control Panel + Bulk Panel -->
+    <div class="grid lg:grid-cols-12 gap-6">
+        <!-- LEFT: CANVAS (1080x1080) with safe zone indicator -->
+        <div class="lg:col-span-5">
+            <div class="canvas-container sticky top-8">
+                <div class="relative rounded-[40px] overflow-hidden bg-gray-900 border-8 border-white/90 shadow-2xl">
+                    <canvas id="posterCanvas" width="1080" height="1080" class="w-full h-auto block"></canvas>
+                    <!-- Safe zone overlay (toggleable) -->
+                    <div id="safeZoneOverlay" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity" style="border: 3px dashed rgba(234,88,12,0.5); margin: 60px; border-radius: 24px;"></div>
+                </div>
+                <!-- Action bar -->
+                <div class="flex mt-4 gap-3 justify-between items-center flex-wrap">
+                    <div class="flex gap-2">
+                        <button id="downloadBtn" class="bg-gray-900 hover:bg-gray-800 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg transition flex items-center gap-2 text-sm">
+                            <i class="fas fa-download"></i> PNG
+                        </button>
+                        <button id="exportJPGBtn" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-xl shadow-sm transition flex items-center gap-2 text-sm">
+                            <i class="fas fa-file-image"></i> JPG
+                        </button>
+                        <button id="toggleSafeZone" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-xl shadow-sm transition flex items-center gap-2 text-sm">
+                            <i class="fas fa-border-all"></i> Safe
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="resetImageBtn" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-xl shadow-sm transition flex items-center gap-2 text-sm">
+                            <i class="fas fa-undo-alt"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MIDDLE: Controls & Editable Fields -->
+        <div class="lg:col-span-3 space-y-4">
+            <!-- Template Switcher -->
+            <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fas fa-layer-group text-amber-600"></i>
+                    <h3 class="font-bold text-gray-800">Template</h3>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="template-card active p-3 rounded-xl border-2 border-amber-500 bg-amber-50 cursor-pointer" data-template="modern">
+                        <i class="fas fa-star text-amber-600"></i>
+                        <span class="font-medium text-sm ml-1">Modern</span>
+                    </div>
+                    <div class="template-card p-3 rounded-xl border border-gray-200 hover:border-amber-300 cursor-pointer" data-template="minimal">
+                        <i class="fas fa-minus text-gray-500"></i>
+                        <span class="font-medium text-sm ml-1">Minimal</span>
+                    </div>
+                    <div class="template-card p-3 rounded-xl border border-gray-200 hover:border-amber-300 cursor-pointer" data-template="bold">
+                        <i class="fas fa-bolt text-gray-500"></i>
+                        <span class="font-medium text-sm ml-1">Bold</span>
+                    </div>
+                    <div class="template-card p-3 rounded-xl border border-gray-200 hover:border-amber-300 cursor-pointer" data-template="elegant">
+                        <i class="fas fa-feather text-gray-500"></i>
+                        <span class="font-medium text-sm ml-1">Elegant</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editable Text (CTA & Subtext) -->
+            <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fas fa-pen text-amber-600"></i>
+                    <h3 class="font-bold text-gray-800">Edit Content</h3>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Main CTA</label>
+                        <input type="text" id="ctaInput" value="⚡ SAME DAY DELIVERY" class="w-full mt-1 px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none transition text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Subtext</label>
+                        <input type="text" id="subtextInput" value="tap to order · free over Ksh 1500" class="w-full mt-1 px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none transition text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toggle Elements -->
+            <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
+                <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2"><i class="fas fa-eye text-amber-600"></i>Visibility</h3>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="toggleLogo" checked class="w-4 h-4 accent-amber-600 rounded">
+                        <span class="text-sm">Show Logo</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="toggleSocials" checked class="w-4 h-4 accent-amber-600 rounded">
+                        <span class="text-sm">Show Social Icons</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="toggleContact" checked class="w-4 h-4 accent-amber-600 rounded">
+                        <span class="text-sm">Show Contact Info</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Opacity & Upload -->
+            <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
+                <div id="dropZone" class="border-2 border-dashed border-amber-300/70 bg-gradient-to-br from-amber-50/50 to-white rounded-xl p-4 text-center cursor-pointer hover:border-amber-500 transition">
+                    <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/jpg, image/webp" class="hidden" />
+                    <i class="fas fa-cloud-upload-alt text-2xl text-amber-500 mb-1"></i>
+                    <p class="font-medium text-gray-800 text-sm" id="uploadText">Upload image</p>
+                </div>
+                <div class="mt-4">
+                    <div class="flex justify-between">
+                        <label class="text-xs font-semibold text-gray-500">Overlay</label>
+                        <span class="text-xs bg-gray-100 px-2 py-0.5 rounded-full" id="opacityValue">82%</span>
+                    </div>
+                    <input type="range" id="opacitySlider" min="0.4" max="1.0" step="0.01" value="0.82" class="w-full mt-1" />
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Bulk Generation Panel -->
+        <div class="lg:col-span-4 space-y-4">
+            <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-5 shadow-xl text-white">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fas fa-cubes text-amber-400"></i>
+                    <h3 class="font-bold">Bulk Generator</h3>
+                    <span class="ml-auto text-[10px] bg-white/10 px-2 py-1 rounded-full">CSV</span>
+                </div>
+                <p class="text-gray-300 text-sm mb-4">Upload CSV with columns: <code class="bg-white/10 px-2 py-0.5 rounded">image_url, cta, subtext</code></p>
+                
+                <div class="space-y-3">
+                    <div class="bg-white/5 rounded-xl p-3 border border-white/10">
+                        <input type="file" id="csvUpload" accept=".csv" class="hidden" />
+                        <button id="csvUploadBtn" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-medium py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                            <i class="fas fa-file-csv"></i> Upload CSV
+                        </button>
+                    </div>
+                    <div id="csvPreview" class="text-xs text-gray-400 max-h-32 overflow-auto bg-black/20 rounded-lg p-2 hidden"></div>
+                    <button id="bulkGenerateBtn" class="w-full bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl transition flex items-center justify-center gap-2 border border-white/20" disabled>
+                        <i class="fas fa-play"></i> Generate Bulk (ZIP)
+                    </button>
+                    <div id="bulkProgress" class="text-xs text-amber-300"></div>
+                </div>
+            </div>
+
+            <!-- Brand Profile (Multi-client ready) -->
+            <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fas fa-building text-amber-600"></i>
+                    <h3 class="font-bold text-gray-800">Brand Profile</h3>
+                </div>
+                <select id="brandSelect" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-amber-200">
+                    <option value="lilwa" selected>Lilwa Delivery (default)</option>
+                    <option value="lilwaExpress">Lilwa Express</option>
+                    <option value="lilwaFoods">Lilwa Foods</option>
+                </select>
+                <p class="text-xs text-gray-400 mt-2"><i class="fas fa-save mr-1"></i>Profile saves logo & contact</p>
+            </div>
+
+            <!-- Asset Preview (SVG icons) -->
+            <div class="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
+                <h3 class="font-bold text-gray-800 mb-3 text-sm flex items-center gap-2"><i class="fab fa-font-awesome text-amber-600"></i>SVG Social Icons</h3>
+                <div class="flex justify-around text-2xl">
+                    <i class="fab fa-instagram text-[#d62976]"></i>
+                    <i class="fab fa-tiktok text-black"></i>
+                    <i class="fab fa-facebook text-[#1877f2]"></i>
+                </div>
+                <p class="text-xs text-gray-400 mt-3 text-center">proper brand vectors</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden canvas for icon caching -->
+<canvas id="iconCacheCanvas" width="100" height="100" style="display:none;"></canvas>
+
+<script>
+    (function(){
+        "use strict";
+
+        // ---------- STATE MANAGER (Centralized) ----------
+        const state = {
+            image: null,
+            opacity: 0.82,
+            ctaText: '⚡ SAME DAY DELIVERY',
+            subtext: 'tap to order · free over Ksh 1500',
+            template: 'modern',
+            showLogo: true,
+            showSocials: true,
+            showContact: true,
+            brand: 'lilwa'
+        };
+
+        // Brand profiles
+        const brandProfiles = {
+            lilwa: { logo: 'LILWA', delivery: 'delivery', website: 'lilwadelivery.com', phone: '0115 006 628', email: 'yes@lilwadelivery.com', handle: '@lilwadelivery', hashtag: '#LilwaOnTheGo' },
+            lilwaExpress: { logo: 'LILWA', delivery: 'express', website: 'express.lilwadelivery.com', phone: '0115 006 629', email: 'express@lilwadelivery.com', handle: '@lilwaexpress', hashtag: '#LilwaExpress' },
+            lilwaFoods: { logo: 'LILWA', delivery: 'foods', website: 'foods.lilwadelivery.com', phone: '0115 006 630', email: 'foods@lilwadelivery.com', handle: '@lilwafoods', hashtag: '#LilwaFoods' }
+        };
+
+        // DOM elements
+        const canvas = document.getElementById('posterCanvas');
+        const ctx = canvas.getContext('2d');
+        const iconCacheCanvas = document.getElementById('iconCacheCanvas');
+        const cacheCtx = iconCacheCanvas.getContext('2d');
+        
+        const fileInput = document.getElementById('imageUpload');
+        const dropZone = document.getElementById('dropZone');
+        const uploadText = document.getElementById('uploadText');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const exportJPGBtn = document.getElementById('exportJPGBtn');
+        const resetBtn = document.getElementById('resetImageBtn');
+        const opacitySlider = document.getElementById('opacitySlider');
+        const opacitySpan = document.getElementById('opacityValue');
+        const ctaInput = document.getElementById('ctaInput');
+        const subtextInput = document.getElementById('subtextInput');
+        const toggleLogo = document.getElementById('toggleLogo');
+        const toggleSocials = document.getElementById('toggleSocials');
+        const toggleContact = document.getElementById('toggleContact');
+        const brandSelect = document.getElementById('brandSelect');
+        const templateCards = document.querySelectorAll('[data-template]');
+        const toggleSafeZone = document.getElementById('toggleSafeZone');
+        const safeZoneOverlay = document.getElementById('safeZoneOverlay');
+        
+        // Bulk elements
+        const csvUpload = document.getElementById('csvUpload');
+        const csvUploadBtn = document.getElementById('csvUploadBtn');
+        const csvPreview = document.getElementById('csvPreview');
+        const bulkGenerateBtn = document.getElementById('bulkGenerateBtn');
+        const bulkProgress = document.getElementById('bulkProgress');
+
+        let csvData = [];
+        let iconImages = { instagram: null, tiktok: null, facebook: null };
+
+        // ---------- TEMPLATE ENGINE (Abstraction) ----------
+        const templates = {
+            modern: { logoX: 70, logoY: 70, ctaY: 840, subtextY: 890, contactY: 970, socialY: 1015 },
+            minimal: { logoX: 70, logoY: 70, ctaY: 880, subtextY: 920, contactY: 990, socialY: 1030 },
+            bold: { logoX: 540, logoY: 120, ctaY: 800, subtextY: 860, contactY: 950, socialY: 1000 },
+            elegante: { logoX: 70, logoY: 120, ctaY: 820, subtextY: 880, contactY: 960, socialY: 1020 }
+        };
+
+        // ---------- MODULAR RENDERER ----------
+        function renderImage() {
+            if (state.image && state.image.complete) {
+                const imgW = state.image.naturalWidth, imgH = state.image.naturalHeight;
+                const targetRatio = 1, imgRatio = imgW / imgH;
+                let sx = 0, sy = 0, sw = imgW, sh = imgH;
+                if (imgRatio > targetRatio) { sw = imgH * targetRatio; sx = (imgW - sw) / 2; }
+                else { sh = imgW / targetRatio; sy = (imgH - sh) / 2; }
+                ctx.drawImage(state.image, sx, sy, sw, sh, 0, 0, 1080, 1080);
+            } else {
+                const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
+                grad.addColorStop(0, '#d97706'); grad.addColorStop(1, '#292524');
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, 1080, 1080);
+            }
+        }
+
+        function renderOverlays() {
+            const bottomGrad = ctx.createLinearGradient(0, 600, 0, 1080);
+            bottomGrad.addColorStop(0, `rgba(10,10,15,0)`);
+            bottomGrad.addColorStop(0.45, `rgba(8,8,14,${state.opacity*0.65})`);
+            bottomGrad.addColorStop(1, `rgba(5,5,10,${state.opacity})`);
+            ctx.fillStyle = bottomGrad; ctx.fillRect(0, 550, 1080, 530);
+        }
+
+        function renderLogo() {
+            if (!state.showLogo) return;
+            const brand = brandProfiles[state.brand];
+            const tpl = templates[state.template] || templates.modern;
+            ctx.save();
+            ctx.shadowColor = '#00000050'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 6;
+            ctx.fillStyle = '#ea580c';
+            ctx.beginPath(); ctx.roundRect(tpl.logoX, tpl.logoY, 280, 100, 60); ctx.fill();
+            ctx.font = '800 64px "Inter", sans-serif'; ctx.fillStyle = '#ffffff';
+            ctx.fillText(brand.logo, tpl.logoX+50, tpl.logoY+68);
+            ctx.font = '500 32px "Inter", sans-serif'; ctx.fillStyle = '#fef3c7';
+            ctx.fillText(brand.delivery, tpl.logoX+158, tpl.logoY+68);
+            ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.restore();
+            ctx.font = '500 26px "Inter", sans-serif'; ctx.fillStyle = '#f8fafc';
+            ctx.fillText(brand.website, tpl.logoX+310, tpl.logoY+62);
+        }
+
+        function renderCTA() {
+            const tpl = templates[state.template] || templates.modern;
+            ctx.save(); ctx.shadowColor = '#00000080'; ctx.shadowBlur = 16;
+            ctx.font = '800 58px "Inter", sans-serif'; ctx.fillStyle = '#f97316';
+            ctx.fillText(state.ctaText, 70, tpl.ctaY);
+            ctx.font = '500 32px "Inter", sans-serif'; ctx.fillStyle = '#e2e8f0';
+            ctx.fillText(state.subtext, 70, tpl.subtextY);
+            ctx.restore();
+        }
+
+        function renderContact() {
+            if (!state.showContact) return;
+            const brand = brandProfiles[state.brand];
+            const tpl = templates[state.template] || templates.modern;
+            ctx.font = '600 38px "Inter", sans-serif'; ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#000000b0'; ctx.shadowBlur = 12;
+            ctx.fillText(`📞 ${brand.phone}`, 70, tpl.contactY);
+            ctx.font = '500 32px "Inter", sans-serif'; ctx.fillStyle = '#fde68a';
+            ctx.fillText(`✉ ${brand.email}`, 520, tpl.contactY);
+            ctx.font = '500 34px "Inter", sans-serif'; ctx.fillStyle = '#fef9c3';
+            ctx.fillText(brand.website, 70, tpl.contactY+60);
+        }
+
+        function renderSocials() {
+            if (!state.showSocials) return;
+            const brand = brandProfiles[state.brand];
+            const tpl = templates[state.template] || templates.modern;
+            const startX = 740;
+            if (iconImages.instagram) ctx.drawImage(iconImages.instagram, startX-38, tpl.socialY-46, 76, 76);
+            if (iconImages.tiktok) ctx.drawImage(iconImages.tiktok, startX+62, tpl.socialY-46, 76, 76);
+            if (iconImages.facebook) ctx.drawImage(iconImages.facebook, startX+162, tpl.socialY-46, 76, 76);
+            ctx.font = 'bold 18px "Inter", sans-serif'; ctx.fillStyle = '#cbd5e1';
+            ctx.textAlign = 'center';
+            ctx.fillText('IG', startX, tpl.socialY+42);
+            ctx.fillText('TT', startX+100, tpl.socialY+42);
+            ctx.fillText('FB', startX+200, tpl.socialY+42);
+            ctx.textAlign = 'left';
+            ctx.font = '500 22px "Inter", sans-serif'; ctx.fillStyle = '#cbd5e1';
+            ctx.fillText(`${brand.handle}  ·  ${brand.hashtag}`, 70, 1068);
+        }
+
+        function renderPoster() {
+            ctx.clearRect(0, 0, 1080, 1080);
+            renderImage();
+            renderOverlays();
+            renderLogo();
+            renderCTA();
+            renderContact();
+            renderSocials();
+        }
+
+        // ---------- ICON CACHING (SVG) ----------
+        function renderIconToCache(iconClass, color, size=80) {
+            return new Promise((resolve) => {
+                iconCacheCanvas.width = size; iconCacheCanvas.height = size;
+                cacheCtx.clearRect(0, 0, size, size);
+                let path = '';
+                if (iconClass.includes('instagram')) path = '<path fill="'+color+'" d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9S339 319.5 339 255.9 287.7 141 224.1 141zm0 189.6c-41.1 0-74.7-33.5-74.7-74.7s33.6-74.7 74.7-74.7 74.7 33.5 74.7 74.7-33.6 74.7-74.7 74.7zm146.4-194.3c0 14.9-12 26.8-26.8 26.8-14.9 0-26.8-12-26.8-26.8s12-26.8 26.8-26.8 26.8 12 26.8 26.8zm76.1 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.8 0-184.8zM398.8 388c-7.8 19.6-22.9 34.7-42.6 42.6-29.5 11.7-99.5 9-132.1 9s-102.7 2.6-132.1-9c-19.6-7.8-34.7-22.9-42.6-42.6-11.7-29.5-9-99.5-9-132.1s-2.6-102.7 9-132.1c7.8-19.6 22.9-34.7 42.6-42.6 29.5-11.7 99.5-9 132.1-9s102.7-2.6 132.1 9c19.6 7.8 34.7 22.9 42.6 42.6 11.7 29.5 9 99.5 9 132.1s2.7 102.7-9 132.1z"/>';
+                else if (iconClass.includes('tiktok')) path = '<path fill="'+color+'" d="M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.23,71.18V0h88a121.18,121.18,0,0,0,1.86,22.17h0A122.18,122.18,0,0,0,381,102.39a121.43,121.43,0,0,0,67,20.14Z"/>';
+                else if (iconClass.includes('facebook')) path = '<path fill="'+color+'" d="M504 256C504 119 393 8 256 8S8 119 8 256c0 123.78 90.69 226.38 209.25 245V327.69h-63V256h63v-54.64c0-62.15 37-96.48 93.67-96.48 27.14 0 55.52 4.84 55.52 4.84v61h-31.28c-30.8 0-40.41 19.12-40.41 38.73V256h68.78l-11 71.69h-57.78V501C413.31 482.38 504 379.78 504 256z"/>';
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="${size}" height="${size}">${path}</svg>`;
+                const img = new Image();
+                img.onload = () => { cacheCtx.drawImage(img, 0, 0, size, size); resolve(canvasToImage(iconCacheCanvas)); };
+                img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+            });
+        }
+        function canvasToImage(c) { const i = new Image(); i.src = c.toDataURL(); return i; }
+
+        async function cacheIcons() {
+            iconImages.instagram = await renderIconToCache('fab fa-instagram', '#d62976', 90);
+            iconImages.tiktok = await renderIconToCache('fab fa-tiktok', '#000000', 90);
+            iconImages.facebook = await renderIconToCache('fab fa-facebook', '#1877f2', 90);
+            renderPoster();
+        }
+
+        // ---------- BULK PROCESSING (CSV + ZIP) ----------
+        function parseCSV(text) {
+            const lines = text.split('\n').filter(l => l.trim());
+            return lines.slice(1).map(line => {
+                const cols = line.split(',').map(c => c.trim());
+                return { image: cols[0], cta: cols[1] || state.ctaText, subtext: cols[2] || state.subtext };
+            }).filter(r => r.image);
+        }
+
+        csvUploadBtn.addEventListener('click', () => csvUpload.click());
+        csvUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    csvData = parseCSV(ev.target.result);
+                    csvPreview.classList.remove('hidden');
+                    csvPreview.innerHTML = csvData.map(r => `<div>${r.image} | ${r.cta}</div>`).join('');
+                    bulkGenerateBtn.disabled = csvData.length === 0;
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        bulkGenerateBtn.addEventListener('click', async () => {
+            if (!csvData.length) return;
+            bulkGenerateBtn.disabled = true;
+            bulkProgress.innerText = `Processing ${csvData.length} posters...`;
+            const zip = new JSZip();
+            
+            for (let i = 0; i < csvData.length; i++) {
+                const row = csvData[i];
+                bulkProgress.innerText = `Rendering ${i+1}/${csvData.length}: ${row.image}`;
+                
+                // Load image from URL (simplified: use placeholder if cross-origin)
+                const img = new Image(); img.crossOrigin = 'Anonymous';
+                await new Promise((resolve) => {
+                    img.onload = () => resolve();
+                    img.onerror = () => resolve(); // fallback
+                    img.src = row.image;
+                });
+                
+                // Update state temporarily
+                const prevImage = state.image, prevCta = state.ctaText, prevSub = state.subtext;
+                state.image = img; state.ctaText = row.cta; state.subtext = row.subtext;
+                renderPoster();
+                
+                const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+                zip.file(`lilwa_${i+1}_${Date.now()}.png`, blob);
+                
+                state.image = prevImage; state.ctaText = prevCta; state.subtext = prevSub;
+            }
+            
+            const content = await zip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.download = `lilwa_bulk_${Date.now()}.zip`;
+            link.href = URL.createObjectURL(content);
+            link.click();
+            bulkProgress.innerText = '✅ Bulk export complete!';
+            bulkGenerateBtn.disabled = false;
+            renderPoster();
+        });
+
+        // ---------- EVENT LISTENERS ----------
+        fileInput.addEventListener('change', (e) => { if(e.target.files[0]) loadImage(e.target.files[0]); });
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-amber-500'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-amber-500'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault(); dropZone.classList.remove('border-amber-500');
+            const f = e.dataTransfer.files[0]; if(f?.type.startsWith('image/')) loadImage(f);
+        });
+        function loadImage(file) {
+            const r = new FileReader(); r.onload = (e) => { const img = new Image(); img.onload = () => { state.image = img; renderPoster(); }; img.src = e.target.result; }; r.readAsDataURL(file);
+            uploadText.innerText = file.name;
+        }
+
+        resetBtn.addEventListener('click', () => { state.image = null; renderPoster(); uploadText.innerText = 'Upload image'; });
+        opacitySlider.addEventListener('input', (e) => { state.opacity = parseFloat(e.target.value); opacitySpan.innerText = Math.round(state.opacity*100)+'%'; renderPoster(); });
+        ctaInput.addEventListener('input', (e) => { state.ctaText = e.target.value; renderPoster(); });
+        subtextInput.addEventListener('input', (e) => { state.subtext = e.target.value; renderPoster(); });
+        toggleLogo.addEventListener('change', (e) => { state.showLogo = e.target.checked; renderPoster(); });
+        toggleSocials.addEventListener('change', (e) => { state.showSocials = e.target.checked; renderPoster(); });
+        toggleContact.addEventListener('change', (e) => { state.showContact = e.target.checked; renderPoster(); });
+        brandSelect.addEventListener('change', (e) => { state.brand = e.target.value; renderPoster(); });
+        templateCards.forEach(c => c.addEventListener('click', () => {
+            templateCards.forEach(t => t.classList.remove('active', 'border-amber-500', 'bg-amber-50'));
+            c.classList.add('active', 'border-amber-500', 'bg-amber-50');
+            state.template = c.dataset.template;
+            renderPoster();
+        }));
+        toggleSafeZone.addEventListener('click', () => safeZoneOverlay.classList.toggle('opacity-100'));
+        downloadBtn.addEventListener('click', () => { const a = document.createElement('a'); a.download = 'lilwa.png'; a.href = canvas.toDataURL(); a.click(); });
+        exportJPGBtn.addEventListener('click', () => { const a = document.createElement('a'); a.download = 'lilwa.jpg'; a.href = canvas.toDataURL('image/jpeg', 0.95); a.click(); });
+
+        // Init
+        cacheIcons();
+        document.fonts.ready.then(renderPoster);
+    })();
+</script>
+</body>
+      </html>
